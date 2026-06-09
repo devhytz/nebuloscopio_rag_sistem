@@ -86,7 +86,12 @@ def retrieve_semantic(conn, embedding: list[float]) -> list[dict]:
                 p.id_pelicula,
                 p.titulo,
                 p.fecha_lanzamiento,
-                1 - (ec.embedding <=> %s::vector) AS similitud,
+                CASE
+                    WHEN ct.tipo = 'sinopsis'
+                        THEN (1 - (ec.embedding <=> %s::vector)) + 0.05
+                    ELSE
+                        (1 - (ec.embedding <=> %s::vector))
+                END AS similitud,
                 ROW_NUMBER() OVER (
                     PARTITION BY p.id_pelicula
                     ORDER BY ec.embedding <=> %s::vector ASC
@@ -111,7 +116,15 @@ def retrieve_semantic(conn, embedding: list[float]) -> list[dict]:
         LIMIT %s
     """
     with get_cursor(conn) as cur:
-        cur.execute(sql, (embedding, embedding, TOP_K))
+        cur.execute(
+            sql,
+            (
+                embedding,
+                embedding,
+                embedding,
+                TOP_K
+            )
+        )
         return cur.fetchall()
 
 def retrieve_hybrid_by_genre(
@@ -171,9 +184,15 @@ def retrieve_hybrid_by_genre(
         LIMIT %s
     """
     with get_cursor(conn) as cur:
-        print(f"Genero recibido: >{genero}<")
-        print(f"Longitud: {len(genero)}")
-        cur.execute(sql, (embedding, embedding, genero, TOP_K))
+        cur.execute(
+            sql,
+            (
+                embedding,  # THEN
+                embedding,  # ELSE
+                embedding,  # ORDER BY ROW_NUMBER
+                TOP_K
+            )
+        )
         return cur.fetchall()
 
 
@@ -332,13 +351,13 @@ def generate_answer(question: str, context: str) -> str:
 
     prompt = f"""{SYSTEM_PROMPT}
 
-CONTEXTO RECUPERADO DE LA BASE DE DATOS:
-{context}
+    CONTEXTO RECUPERADO DE LA BASE DE DATOS:
+    {context}
 
-PREGUNTA DEL USUARIO:
-{question}
+    PREGUNTA DEL USUARIO:
+    {question}
 
-RESPUESTA:"""
+    RESPUESTA:"""
 
     payload = {
         "model":  OLLAMA_MODEL,
@@ -347,6 +366,9 @@ RESPUESTA:"""
     }
 
     try:
+        print("\n========== PROMPT ==========")
+        print(prompt[:5000])
+        print("\n============================")
         response = requests.post(OLLAMA_URL, json=payload, timeout=120)
         response.raise_for_status()
         return response.json()["response"]
@@ -758,6 +780,9 @@ def main():
             save_results(conn, id_consulta, results)
 
             print("[INFO] Generando respuesta con el LLM...")
+            print("\n========== CONTEXTO ==========")
+            print(context)
+            print("\n==============================")
             answer = generate_answer(question, context)
             save_answer(conn, id_consulta, answer, context)
 

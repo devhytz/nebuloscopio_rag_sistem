@@ -1,7 +1,3 @@
-# =====================================================
-# conexion.py — Conexión a PostgreSQL
-# =====================================================
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from config import DB_CONFIG

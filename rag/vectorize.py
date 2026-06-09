@@ -1,17 +1,3 @@
-# =====================================================
-# vectorize.py — Genera y almacena embeddings en pgvector
-#
-# Ejecutar UNA SOLA VEZ después de poblar la BD con 02_seed.sql:
-#   python vectorize.py
-#
-# Qué hace:
-#   1. Lee contenido_textual y resena de la BD
-#   2. Aplica la estrategia de chunking correspondiente
-#   3. Genera embeddings con sentence-transformers (local, sin costo)
-#   4. Guarda los embeddings en embedding_contenido y embedding_resena
-#   5. Crea los índices IVFFlat para búsqueda aproximada eficiente
-# =====================================================
-
 import sys
 import psycopg2
 from sentence_transformers import SentenceTransformer

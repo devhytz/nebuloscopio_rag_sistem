@@ -1,19 +1,3 @@
-# =====================================================
-# main.py — Pipeline RAG con Consultas Híbridas
-#
-# Uso:
-#   python main.py
-#   → El sistema pregunta qué tipo de búsqueda hacer y la consulta
-#
-# Modos de búsqueda disponibles:
-#   1. Semántica pura      → solo similitud vectorial (TOP-K)
-#   2. Híbrida por género  → filtro SQL de género + similitud vectorial
-#   3. Híbrida por score   → similitud vectorial con umbral mínimo
-#
-# Arquitectura del pipeline RAG:
-#   consulta → embedding → retrieval híbrido → contexto → LLM → respuesta
-# =====================================================
-
 import requests
 from sentence_transformers import SentenceTransformer
 
@@ -27,33 +11,14 @@ from config import (
 )
 from conexion import get_connection, get_cursor
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# MODELO DE EMBEDDINGS (se carga una sola vez al iniciar)
-# ─────────────────────────────────────────────────────────────────────────────
-
 print("[INFO] Cargando modelo de embeddings...")
 model = SentenceTransformer(EMBEDDING_MODEL)
 print("[OK]  Modelo cargado\n")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PASO 1 — EMBEDDING DE LA CONSULTA
-# ─────────────────────────────────────────────────────────────────────────────
-
 def generate_embedding(text: str) -> list[float]:
-    """
-    Genera un embedding normalizado (longitud = 1) para el texto recibido.
-    La normalización hace que la distancia coseno y el producto interno
-    sean equivalentes, mejorando la velocidad de búsqueda.
-    """
     vector = model.encode(text, normalize_embeddings=True)
     return vector.tolist()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PASO 2 — PERSISTENCIA DE CONSULTA Y EMBEDDING
-# ─────────────────────────────────────────────────────────────────────────────
 
 def save_query(conn, user_id: int, query_text: str) -> int:
     """
@@ -75,10 +40,6 @@ def save_query(conn, user_id: int, query_text: str) -> int:
 
 
 def save_query_embedding(conn, id_consulta: int, embedding: list[float]):
-    """
-    Guarda el embedding de la consulta en `embedding_consulta`.
-    ON CONFLICT permite re-ejecutar sin duplicados.
-    """
     with get_cursor(conn) as cur:
         cur.execute(
             """
@@ -91,18 +52,6 @@ def save_query_embedding(conn, id_consulta: int, embedding: list[float]):
         )
     conn.commit()
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PASO 3 — RETRIEVAL: TRES MODOS DE BÚSQUEDA HÍBRIDA
-#
-# Todos siguen la anatomía del PDF:
-#   SELECT campos_relacionales, score_semantico
-#   FROM   tabla_vectorial
-#   JOIN   tabla_relacional ON clave_foranea   ← JOIN relacional
-#   WHERE  condicion_sql                        ← FILTRO exacto
-#   ORDER BY vector <=> query_vector ASC        ← ORDEN semántico
-#   LIMIT K
-# ─────────────────────────────────────────────────────────────────────────────
 
 def retrieve_semantic(conn, embedding: list[float]) -> list[dict]:
     """
@@ -152,7 +101,6 @@ def retrieve_semantic(conn, embedding: list[float]) -> list[dict]:
     with get_cursor(conn) as cur:
         cur.execute(sql, (embedding, embedding, TOP_K))
         return cur.fetchall()
-
 
 def retrieve_hybrid_by_genre(
     conn, embedding: list[float], genero: str
@@ -300,11 +248,6 @@ def retrieve_hybrid_by_score(
         cur.execute(sql, (embedding, embedding, umbral, TOP_K))
         return cur.fetchall()
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PASO 4 — PERSISTENCIA DE RESULTADOS (trazabilidad del pipeline RAG)
-# ─────────────────────────────────────────────────────────────────────────────
-
 def save_results(conn, id_consulta: int, results: list[dict]):
     """
     Registra en `resultado_busqueda` cada película recuperada,
@@ -327,9 +270,8 @@ def save_results(conn, id_consulta: int, results: list[dict]):
     conn.commit()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # PASO 5 — CONSTRUCCIÓN DEL CONTEXTO PARA EL LLM
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 def build_context(results: list[dict]) -> str:
     """
@@ -367,10 +309,6 @@ def build_context(results: list[dict]) -> str:
 
     return "\n\n" + ("─" * 50 + "\n\n").join(blocks)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PASO 6 — GENERACIÓN DE RESPUESTA (LLM local via Ollama)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def generate_answer(question: str, context: str) -> str:
     """
@@ -412,9 +350,8 @@ RESPUESTA:"""
         return f"[ERROR] Fallo al generar respuesta: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PASO 7 — PERSISTENCIA DE RESPUESTA
-# ─────────────────────────────────────────────────────────────────────────────
+# PERSISTENCIA DE RESPUESTA
+
 
 def save_answer(conn, id_consulta: int, answer: str, context: str):
     """Guarda la respuesta generada y el contexto usado en `respuesta`."""

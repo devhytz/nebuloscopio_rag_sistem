@@ -1,18 +1,9 @@
-# =====================================================
-# chunking.py — Estrategias de chunking para el pipeline RAG
-#
-# Implementa las dos estrategias definidas en la Sección 5:
-#   1. Paragraph-Aware  → sinopsis y descripciones
-#   2. Fixed-Size       → reseñas de usuarios
-# =====================================================
-
 from config import (
     CHUNK_SIZE_PARAGRAPH,
     CHUNK_OVERLAP_PARAGRAPH,
     CHUNK_SIZE_FIXED,
     CHUNK_OVERLAP_FIXED,
 )
-
 
 def _split_by_tokens(text: str, chunk_size: int, overlap: int) -> list[str]:
     """
@@ -30,7 +21,6 @@ def _split_by_tokens(text: str, chunk_size: int, overlap: int) -> list[str]:
         start += chunk_size - overlap
     return [c for c in chunks if c.strip()]
 
-
 def chunk_paragraph_aware(text: str) -> list[str]:
     """
     Estrategia Paragraph-Aware:
@@ -47,7 +37,6 @@ def chunk_paragraph_aware(text: str) -> list[str]:
         else:
             chunks.extend(_split_by_tokens(para, CHUNK_SIZE_PARAGRAPH, CHUNK_OVERLAP_PARAGRAPH))
     return chunks
-
 
 def chunk_fixed_size(text: str) -> list[str]:
     """
@@ -70,7 +59,6 @@ def chunk_text(text: str, strategy: str = "paragraph") -> list[str]:
         raise ValueError(f"Estrategia desconocida: '{strategy}'. Usar 'paragraph' o 'fixed'.")
 
 
-# ─── Prueba rápida ────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     texto_prueba = (
         "En un futuro donde la Tierra agoniza, Cooper lidera una misión espacial.\n\n"

@@ -1,9 +1,3 @@
-# =====================================================
-# config.py — Configuración central del proyecto
-# Editar este archivo antes de ejecutar cualquier script
-# =====================================================
-
-# ─── BASE DE DATOS ─────────────────────────────────────────────────────────
 DB_CONFIG = {
     "host": "ep-autumn-sound-ac5uosnd-pooler.sa-east-1.aws.neon.tech",
     "port": 5432,
@@ -13,31 +7,19 @@ DB_CONFIG = {
     "sslmode": "require"
 }
 
-# ─── MODELOS ────────────────────────────────────────────────────────────────
-
-# Modelo de embeddings (sentence-transformers, corre local, sin costo)
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DIM   = 384   # Dimensión fija del modelo all-MiniLM-L6-v2
+EMBEDDING_DIM   = 384   
 
-# Modelo LLM generativo (Ollama, corre local, sin costo)
-# Requiere tener Ollama instalado: https://ollama.com
-# y haber ejecutado: ollama pull llama3.2
 OLLAMA_MODEL    = "llama3.2"
 OLLAMA_URL      = "http://localhost:11434/api/generate"
 
-# ─── CHUNKING ────────────────────────────────────────────────────────────────
+CHUNK_SIZE_PARAGRAPH    = 300   
+CHUNK_OVERLAP_PARAGRAPH = 50    
 
-# Estrategia Paragraph-Aware (para sinopsis y descripciones)
-CHUNK_SIZE_PARAGRAPH    = 300   # tokens máximos por chunk
-CHUNK_OVERLAP_PARAGRAPH = 50    # tokens de overlap entre chunks
-
-# Estrategia Fixed-Size (para reseñas)
 CHUNK_SIZE_FIXED        = 150
 CHUNK_OVERLAP_FIXED     = 30
 
-# ─── RAG ─────────────────────────────────────────────────────────────────────
 
-# Número de chunks a recuperar por búsqueda vectorial
 TOP_K = 3
 
 SYSTEM_PROMPT = """
@@ -68,3 +50,5 @@ a menos que estén explícitamente descritos en el contexto.
 11. No afirmes diferencias o similitudes que no aparezcan explícitamente
 en el contexto recuperado.
 """
+
+# CLIP
